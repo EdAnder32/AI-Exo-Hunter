@@ -1,17 +1,14 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS, cross_origin
+from flask_cors import cross_origin
 import pandas as pd
 import joblib
+import torch
 
 app = Flask(__name__)
 
-# Carrega o modelo
-model = joblib.load("exoplanet_model.pkl")
-
-# Número total de features do modelo
-NUM_FEATURES = model.n_features_in_
-
-# Índices das suas features importantes no array de treino
+# --- Modelo 1: Joblib (.pkl)
+model_pkl = joblib.load("exoplanet_model.pkl")
+NUM_FEATURES = model_pkl.n_features_in_
 IMPORTANT_FEATURES = {
     "temperature": 0,
     "stellar_temp": 1,
@@ -25,27 +22,52 @@ IMPORTANT_FEATURES = {
     "planet_radius": 9
 }
 
+# --- Modelo 2: PyTorch (.pt) genérico
+# Carrega o modelo completo salvo com torch.save(model)
+model_pt = torch.load("model.pt", map_location=torch.device('cpu'))
+model_pt.eval()
+
 @app.route("/predict", methods=["POST"])
-@cross_origin()  # Ativa CORS apenas nesta rota
+@cross_origin()
 def predict():
     try:
         data = request.get_json()
         
-        # Inicializa array com zeros
+        # --- Prepara os dados
         row = [0] * NUM_FEATURES
-        
-        # Preenche só as features importantes
         for key, idx in IMPORTANT_FEATURES.items():
             if key in data:
                 row[idx] = data[key]
-        
         df = pd.DataFrame([row])
-        pred = model.predict(df)[0]
-        prob = model.predict_proba(df)[0][1]
-        return jsonify({"prediction": int(pred), "probability": float(prob)})
+        
+        # --- Previsão do modelo .pkl
+        prob_pkl = model_pkl.predict_proba(df)[0][1]
+        
+        # --- Previsão do modelo .pt
+        # Assumindo que o modelo retorna um tensor com probabilidade entre 0 e 1
+        x_tensor = torch.tensor([row], dtype=torch.float32)
+        with torch.no_grad():
+            output = model_pt(x_tensor)
+            # Caso o output seja logit, aplica sigmoid
+            if output.shape[-1] == 1 or len(output.shape) == 2 and output.shape[1] == 1:
+                prob_pt = torch.sigmoid(output).item()
+            else:
+                # Se for vetor de probabilidades (softmax), pega a classe 1
+                prob_pt = torch.softmax(output, dim=1)[0][1].item()
+        
+        # --- Média das probabilidades
+        prob_avg = (prob_pkl + prob_pt) / 2
+        pred_final = int(prob_avg >= 0.5)
+        
+        return jsonify({
+            "prediction": pred_final,
+            "probability": prob_avg,
+            "prob_pkl": prob_pkl,
+            "prob_pt": prob_pt
+        })
+    
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
