@@ -49,7 +49,7 @@ def predict():
 def confirmed():
     try:
         # Lê o arquivo CSV com os dados
-        df = pd.read_csv("data.csv")
+        df = pd.read_csv("content.csv")
 
         # Filtra apenas exoplanetas confirmados
         confirmed_planets = df[df["koi_disposition"] == "CONFIRMED"].copy()
@@ -116,3 +116,4 @@ def confirmed():
 # ======== MAIN ========
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
+
