@@ -1,15 +1,11 @@
-## An python API for our Model
-## Design by edander32 (Edmilson Alexandre) and jjambo(Joaquim Jambo)
-
 from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 import pandas as pd
 import joblib
-
-import pandas as pd
-import joblib
-from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+
+# Carrega o modelo
 model = joblib.load("exoplanet_model.pkl")
 
 # Número total de features do modelo
@@ -30,6 +26,7 @@ IMPORTANT_FEATURES = {
 }
 
 @app.route("/predict", methods=["POST"])
+@cross_origin()  # Ativa CORS apenas nesta rota
 def predict():
     try:
         data = request.get_json()
@@ -52,5 +49,3 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
-
-
