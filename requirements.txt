@@ -4,4 +4,3 @@ joblib
 scikit-learn
 lightgbm
 flask-cors
-torch
