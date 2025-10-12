@@ -176,12 +176,6 @@ This guarantees:
 - Deploy to cloud (AWS / Azure) with GPU inference  
 - Blockchain integration for model audit trails  
 
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**.  
-See the [LICENSE](LICENSE) file for details.  
 
 ---
 
